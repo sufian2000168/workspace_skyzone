@@ -51,4 +51,3 @@ server.log
 skills/
 __MACOSX/
 prisma/db/*.db
-
