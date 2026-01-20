@@ -1,0 +1,98 @@
+// Sky Zone PVC ID Card Ordering System - Database Schema
+// Adapted for Next.js 15 with Prisma ORM
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User Model (Admin and Customers)
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String
+  password      String   // Hashed password
+  role          String   @default("customer") // "admin" or "customer"
+  phone         String?
+  address       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  orders        Order[]
+}
+
+// Card Design Model - PVC ID Card Templates
+model CardDesign {
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  price         Float    // Base price per card
+  imageUrl      String   // Preview image URL
+  isActive      Boolean  @default(true)
+  category      String?  // e.g., "Student", "Corporate", "Event"
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  orders        Order[]
+}
+
+// Order Model - Customer Orders
+model Order {
+  id            String   @id @default(cuid())
+  orderNumber   String   @unique // Human-readable order ID (e.g., SKYZ-001234)
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Customer Details
+  customerName  String
+  customerEmail String
+  customerPhone String
+  customerAddress String?
+
+  // Card Details
+  cardDesignId  String
+  cardDesign    CardDesign @relation(fields: [cardDesignId], references: [id])
+  quantity      Int      @default(1)
+  pricePerCard  Float
+  totalPrice    Float    // Including all fees
+
+  // Status
+  status        String   @default("pending") // pending, in_design, printed, shipped, delivered, cancelled
+  orderNotes    String?
+
+  // File Paths (stored locally)
+  frontImage    String?  // Front side image path
+  backImage     String?  // Back side image path
+  pdfDocument   String?  // PDF document path
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  payment       Payment?
+}
+
+// Payment Model - Razorpay Payment Records
+model Payment {
+  id            String   @id @default(cuid())
+  orderId       String   @unique
+  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  // Razorpay Details
+  razorpayOrderId   String?
+  razorpayPaymentId String?
+  razorpaySignature String?
+
+  amount        Float    // Amount in INR
+  currency      String   @default("INR")
+  status        String   // pending, completed, failed, refunded
+
+  // Payment Response
+  paymentResponse String? // Store full response as JSON string
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
